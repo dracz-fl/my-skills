@@ -105,10 +105,25 @@ would fix.
 ## Step 4 — Pick the target (ask each time)
 
 For each fix, decide whether it's **global** (true regardless of project — belongs
-in `~/.claude/CLAUDE.md` or `~/.claude/skills/`) or **project-specific** (belongs
-in the project's `CLAUDE.md` / `.claude/`). Propose the one you think fits and
-say why, but confirm with the user before writing — the global/project split is
-easy to get wrong and annoying to undo.
+in `~/.claude/CLAUDE.md`) or **project-specific** (belongs in the project's
+`CLAUDE.md` / `.claude/`). Propose the one you think fits and say why, but confirm
+with the user before writing — the global/project split is easy to get wrong and
+annoying to undo. A lesson about *this codebase's* stack, conventions, or commands
+is project-level: change the project, not the user's global config.
+
+**Skills are a special case — they live in a marketplace repo, not in
+`~/.claude/skills/`.** Skills installed via a plugin run from a read-only cache
+that is overwritten on every marketplace update, so editing the installed copy is
+lost work. A skill's true home is the *source marketplace repo* it came from:
+
+- A **brand-new** skill goes in the user's personal skills marketplace repo — the
+  default home for skills they author.
+- **Editing an existing** skill means editing it in the marketplace repo it
+  *originated from* — e.g. a Formlabs skill belongs in `formlabs-agent-skills`,
+  not the personal repo and not the plugin cache.
+
+If you don't know where a marketplace's source repo lives on disk, ask once rather
+than guessing — editing the wrong copy silently wastes the change.
 
 ## Step 5 — Apply
 
@@ -129,9 +144,15 @@ obvious; a rule the future model understands is followed better than a bare MUST
 `settings.json`, or rewriting an existing rule changes behavior broadly or is
 fiddly to reverse. Describe what you'd do and get a yes first. Then:
 
-- **New/updated skills** → invoke the `skill-creator` skill and pass it the
-  workflow you extracted (the steps, the corrections, the I/O you observed).
-- **Hooks / permissions / settings** → invoke the `update-config` skill.
+- **New/updated skills** → author the change with the `skill-creator` skill,
+  writing into the skill's home marketplace repo (Step 4) — never into the
+  installed plugin cache. Then commit it *back to that repo*: show the diff, and
+  on the user's yes, `git commit` and push. Close by reminding them to sync the
+  running copy — `/plugin marketplace update <name>` then `/reload-plugins` — since
+  nothing changes in their session until the marketplace is refreshed.
+- **Hooks / permissions / settings** → invoke the `update-config` skill, at the
+  right scope (project `.claude/settings.json` for project commands, `~/.claude`
+  for global).
 
 When a fix lands outside this session's reach (something only the user can set
 up, or a decision they need to make), say so and leave it as a clear next step.
