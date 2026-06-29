@@ -1,1 +1,61 @@
 # my-skills
+
+A personal [Claude Code plugin marketplace](https://code.claude.com/docs/en/plugin-marketplaces).
+It hosts my own skills so I can version them in git, sync them into any
+workspace, and share them with others.
+
+## Layout
+
+```
+my-skills/
+├── .claude-plugin/marketplace.json   # marketplace manifest — lists the plugins below
+└── workflow/                         # the "workflow" plugin (bundles my skills)
+    ├── .claude-plugin/plugin.json
+    └── skills/
+        └── retrospective/SKILL.md
+```
+
+- **Marketplace:** `my-skills`
+- **Plugin:** `workflow` — workflow-improvement skills.
+
+## Install
+
+From the local clone:
+
+```
+/plugin marketplace add /Users/daniel.racz/repos/my-skills
+/plugin install workflow@my-skills
+```
+
+Or, once pushed to a remote, from anywhere:
+
+```
+/plugin marketplace add dracz-fl/my-skills         # GitHub owner/repo
+/plugin install workflow@my-skills
+```
+
+Skills are then invoked namespaced by plugin, e.g. `/workflow:retrospective`.
+
+## Update / sync after changing a skill
+
+```
+/plugin marketplace update my-skills
+```
+
+(or `/reload-plugins` inside a session after a local edit).
+
+## Add a new skill
+
+1. Create `workflow/skills/<skill-name>/SKILL.md` (use the `skill-creator`
+   skill, or copy an existing one as a template).
+2. Commit and push.
+3. `/plugin marketplace update my-skills` to pull it in.
+
+To group skills into a separate plugin instead, add a sibling directory with its
+own `.claude-plugin/plugin.json` and list it in `marketplace.json`.
+
+## Skills
+
+| Skill | Plugin | What it does |
+|-------|--------|--------------|
+| `retrospective` | `workflow` | Reviews the current conversation for friction (corrections, wrong guesses, repetition, recurring permission prompts), filters to the durable lessons, and turns them into a CLAUDE.md rule, a new skill, a hook, or a reference doc. |

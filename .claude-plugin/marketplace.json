@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "my-skills",
+  "owner": {
+    "name": "Daniel Racz",
+    "email": "daniel.racz@formlabs.com"
+  },
+  "description": "Daniel's personal collection of Claude Code skills.",
+  "plugins": [
+    {
+      "name": "workflow",
+      "source": "./workflow",
+      "description": "Workflow-improvement skills, including a retrospective that mines a session for durable lessons and turns them into CLAUDE.md rules, skills, hooks, or reference docs."
+    }
+  ]
+}

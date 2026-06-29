@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin.json",
+  "name": "workflow",
+  "description": "Workflow-improvement skills for Claude Code.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Daniel Racz",
+    "email": "daniel.racz@formlabs.com"
+  },
+  "keywords": ["workflow", "retrospective", "process", "skills"]
+}
