@@ -86,6 +86,53 @@ If nothing clears the bar, say so plainly — "this session was clean, nothing
 worth capturing" is a perfectly good retrospective outcome. Don't manufacture
 findings.
 
+## Step 2.5 — Check the repeat-offender ledger
+
+There is a second trap, the mirror of over-capturing: a lesson you *already*
+captured gets violated **again**. Adding another prose rule won't fix it — the
+last prose rule didn't. A rule that keeps being ignored is evidence that prose is
+the wrong tool for it, not that the prose needs restating. Catching this is what
+turns the retrospective into a ratchet instead of a pile.
+
+Keep a small ledger at `~/.claude/retrospective/offenses.json` (sibling to the
+marketplace registry; create as `{ "offenses": {} }` if missing). Shape:
+
+```json
+{
+  "offenses": {
+    "<stable-kebab-key>": {
+      "description": "one line — the recurring friction",
+      "count": 2,
+      "fixLevel": "prose",
+      "firstSeen": "<date>",
+      "lastSeen": "<date>"
+    }
+  }
+}
+```
+
+For each friction that cleared Step 2:
+
+1. Match it against existing ledger entries by meaning, not exact words (the
+   key is a stable slug like `build-on-unverified-external-contract`). New →
+   add it at `count: 1` with the `fixLevel` you're about to apply. Seen before →
+   bump `count` and `lastSeen`.
+2. **A repeat (count ≥ 2) is the headline finding, not a footnote.** It means the
+   existing fix isn't holding. Do not propose the same level again. Escalate one
+   rung up the ladder:
+
+   `prose` (a `CLAUDE.md` rule) → `gate` (a step in a skill that *executes* at a
+   checkpoint, e.g. `pre-pr-gates`, so the check fires in the moment instead of
+   sitting in buried context) → `hook` (deterministic, the harness enforces it —
+   only reachable for mechanically-detectable lessons).
+
+   Update the entry's `fixLevel` to the rung you escalate to. A judgment lesson
+   that can't be mechanically detected tops out at `gate` — say so rather than
+   forcing a hook that can't fire reliably.
+
+Surface repeats explicitly in the output (see the "Repeat offenders" block in the
+format), with the count and the escalation you're proposing.
+
 ## Step 3 — Classify each surviving lesson into a fix
 
 Match the lesson to the right kind of fix. The kind matters: a behavioral
@@ -100,7 +147,8 @@ nudge and a thing-that-must-happen-every-time want completely different homes.
 
 If a lesson could be two things, prefer the cheapest durable one: a one-line rule
 beats a skill; a skill beats nothing. Don't build a hook for something a sentence
-would fix.
+would fix. **Exception:** a repeat offender from Step 2.5 has already proven the
+cheap fix doesn't hold — take the escalated rung, not the cheapest one.
 
 ## Step 4 — Pick the target (ask each time)
 
@@ -194,6 +242,10 @@ Lead with the verdict, then the findings as a scannable list. Keep it tight.
 ## Retrospective
 
 **Verdict:** <one line — e.g. "3 lessons worth keeping, 1 applied, 2 need your call">
+
+### Repeat offenders (escalate, don't restate)
+- <lesson> — seen <count>× (ledger: <key>); current fix <fixLevel> isn't holding
+  → escalate to <next rung> because <why>
 
 ### Applied (low-risk)
 - <lesson> → <fix> in <file>
