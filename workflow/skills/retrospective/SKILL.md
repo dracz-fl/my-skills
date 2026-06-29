@@ -122,8 +122,37 @@ lost work. A skill's true home is the *source marketplace repo* it came from:
   *originated from* — e.g. a Formlabs skill belongs in `formlabs-agent-skills`,
   not the personal repo and not the plugin cache.
 
-If you don't know where a marketplace's source repo lives on disk, ask once rather
-than guessing — editing the wrong copy silently wastes the change.
+**Resolve repo locations from the registry — never hardcode them here.** This
+skill keeps a small state file that maps each marketplace to its local source-repo
+path, so it learns the layout once and never has to re-ask. The registry lives at
+`~/.claude/retrospective/marketplaces.json` (a fixed, machine-agnostic location —
+not anyone's specific folder). Shape:
+
+```json
+{
+  "marketplaces": {
+    "<marketplace-name>": {
+      "repo": "/absolute/path/to/the/clone",
+      "skillsPath": "relative/path/to/skills/dir",
+      "default_for_new_skills": false
+    }
+  }
+}
+```
+
+Use it like this whenever a fix touches a skill:
+
+1. Read the registry (create it as `{ "marketplaces": {} }` if it's missing).
+2. Look up the marketplace you need to write to. If it's there, use its `repo` +
+   `skillsPath`. Brand-new skills go to the entry flagged
+   `default_for_new_skills`.
+3. If the marketplace is **not** in the registry, ask the user once for its local
+   repo path, confirm the path exists, then write the new entry back to the file
+   so no future session has to ask again. Editing the wrong copy (or the read-only
+   plugin cache) silently wastes the change — the registry is what prevents that.
+
+The paths live only in this per-user registry; this skill file stays free of any
+specific folder so it ports cleanly to anyone who installs it.
 
 ## Step 5 — Apply
 
