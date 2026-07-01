@@ -1,0 +1,42 @@
+{
+  "eyebrow": "FN-9999 · Local verification",
+  "title": "The <code>/health</code> endpoint returns 200 with the build SHA",
+  "what_this_proves": "Live check that <code>GET /health</code> returns 200 and reports the deployed commit, against the running dev server.",
+  "doc_title": "FN-9999 — /health endpoint proof",
+  "verdict": {
+    "status": "PARTIAL",
+    "meta": "curl + jest · 3 checks · 1.2s",
+    "summary": "2/3 verified — prod TLS left for the user."
+  },
+  "method": [
+    "Ran <b><code>npm run dev</code></b>, confirmed bound to <code>:3000</code>.",
+    "<b><code>curl -i /health</code></b> — captured status line + body.",
+    "Ran <code>health.test.ts</code> unmodified against the same process."
+  ],
+  "evidence": [
+    {
+      "type": "image",
+      "path": "shot01.png",
+      "id": "01 · health-response.png",
+      "alt": "Terminal showing HTTP 200 and JSON body with sha field",
+      "caption": "Live <code>curl -i</code> against the running server.",
+      "intro": "Response captured from the running process:"
+    },
+    {
+      "type": "output",
+      "title": "curl -i localhost:3000/health",
+      "text": "HTTP/1.1 200 OK\ncontent-type: application/json\n\n{\"status\":\"ok\",\"sha\":\"a1b2c3d\"}"
+    }
+  ],
+  "requirements": [
+    {"requirement": "Returns HTTP 200", "test": "curl -i /health", "result": "200 OK", "ok": true},
+    {"requirement": "Reports build SHA", "test": "jest asserts body.sha", "result": "a1b2c3d", "ok": true},
+    {"requirement": "Serves over TLS in prod", "test": "not run locally", "result": "not run", "ok": false}
+  ],
+  "scope": {
+    "proven": ["Dev server returns <b>200</b> with a <code>sha</code> field."],
+    "inferred": ["SHA matches the deployed commit — read from the deploy's env, not cross-checked against a real deploy."],
+    "user_must_verify": ["TLS + 200 on the <b>prod</b> load balancer — only checkable on real infra."]
+  },
+  "footer": ["repo: demo @ fn-9999-health", "test: health.test.ts", "date: 2026-07-01"]
+}
