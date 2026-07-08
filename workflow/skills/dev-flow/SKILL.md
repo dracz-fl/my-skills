@@ -45,6 +45,8 @@ Invoke `grug` (Skill tool). This puts the session into grug mode — grug voice 
 
 Grug mode persists across the whole dev phase. Stay in it until the build is done; the user drops the persona when they want ("normal mode").
 
+**Orchestrate, don't hand-code, when the work is big enough to split.** If the plan decomposes into parts that can proceed independently — separate modules/files, or a build + tests + docs split — the preferred move is to spawn a team of subagents (Agent tool) and have this main thread act as the orchestrator, not the implementer: break the plan into well-scoped units, dispatch one agent per unit (in parallel where they don't conflict; give agents that edit files concurrently their own worktree via `isolation: "worktree"`), then integrate and verify their results. Grug's judgment still governs — each agent gets the plan and the anti-complexity brief, and the orchestrator keeps the pieces simple and coherent. For a small, single-seam change, skip the team and implement inline; the overhead of a team buys nothing there.
+
 ## Step 4 — Done check → auto-advance
 
 When the build reaches a done-and-verified state on its own, continue straight into the gates and PR-write; don't wait to be told. "Done and verified" means all of:
