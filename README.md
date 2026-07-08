@@ -58,7 +58,7 @@ own `.claude-plugin/plugin.json` and list it in `marketplace.json`.
 
 | Skill | Plugin | What it does |
 |-------|--------|--------------|
-| `dev-flow` | `workflow` | Router for the standard per-ticket dev flow: loads the ticket, plans with `/grill-with-docs`, builds under `/grug:grug`, then (once dev is done) runs `/pre-pr-gates` and authors the PR with `/formlabs-pr-write`. |
+| `dev-flow` | `workflow` | Router for the standard per-ticket dev flow: loads the ticket, plans with `/grill-with-docs`, builds under `/grug:grug`, then (once dev is done) runs `/pre-pr-gates`, authors the PR with `/formlabs-pr-write`, and babysits the PR through CodeRabbit's review until it's clean. |
 | `pre-pr-gates` | `workflow` | Runs the mandatory pre-PR quality gates — an assumptions audit (Gate 0) then `/simplify`, `/decontextualize-doc-comments`, and `/thermo-nuclear-review` in sequence — before declaring work done or PR-ready. |
 | `prove-it` | `workflow` | Produces a proof-of-work artifact for a completed task: turns requirements into real tests, runs them, captures the evidence, and renders an HTML proof mapping each requirement to how it was tested. |
 | `retrospective` | `workflow` | Reviews the current conversation for friction (corrections, wrong guesses, repetition, recurring permission prompts), filters to the durable lessons, and turns them into a CLAUDE.md rule, a new skill, a hook, or a reference doc. |

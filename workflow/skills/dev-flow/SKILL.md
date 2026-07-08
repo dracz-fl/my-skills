@@ -1,11 +1,11 @@
 ---
 name: dev-flow
-description: "Router that drives my standard per-ticket development flow end to end: load the ticket's context, stress-test the plan with /grill-with-docs, switch into /grug:grug for the build, then — once dev is done — run /pre-pr-gates and author the PR with /formlabs-pr-write. Use when the user hands over a ticket to work on: 'start on TICKET-123', 'kick off the dev flow for <ticket>', 'let's work this ticket', 'run my dev flow', 'begin <ticket>'. Also handles the back half on its own: when the user says 'dev is done', 'wrap up <ticket>', or 'ready for PR', run the gates and PR-write steps. Do NOT use for: a one-off question about a ticket, running a single one of these skills directly, or a change that isn't tied to a ticket."
+description: "Router that drives my standard per-ticket development flow end to end: load the ticket's context, stress-test the plan with /grill-with-docs, switch into /grug:grug for the build, then — once dev is done — run /pre-pr-gates, author the PR with /formlabs-pr-write, and babysit the open PR through CodeRabbit's automated review (wait ~15 min for it, then work its findings until clean). Use when the user hands over a ticket to work on: 'start on TICKET-123', 'kick off the dev flow for <ticket>', 'let's work this ticket', 'run my dev flow', 'begin <ticket>'. Also handles the back half on its own: when the user says 'dev is done', 'wrap up <ticket>', or 'ready for PR', run the gates, PR-write, and review-babysitting steps. Do NOT use for: a one-off question about a ticket, running a single one of these skills directly, or a change that isn't tied to a ticket."
 ---
 
 # Dev Flow
 
-A router that runs my standard sequence for taking a ticket from assignment to an open PR. It does not re-implement any step — it orchestrates four existing skills in order, with a mandatory human checkpoint in the middle where the actual coding happens.
+A router that runs my standard sequence for taking a ticket from assignment to an open PR and through its automated review. It does not re-implement any step — it orchestrates existing skills in order, then babysits the PR once it's open.
 
 The flow, and why the order is fixed:
 
@@ -15,6 +15,7 @@ The flow, and why the order is fixed:
 4. **Done check** → when the build is done and verified, the flow auto-advances; otherwise it keeps iterating (or waits, if the user says to hold).
 5. **Gates — `/pre-pr-gates`** → quality gates on the finished change.
 6. **PR — `/formlabs-pr-write`** → author the PR body against the real change and the ticket.
+7. **Babysit review** → wait for CodeRabbit to review the PR (~15 min), then work through its findings until the PR is clean.
 
 ## Two entry points
 
@@ -62,7 +63,30 @@ When the user signals dev is done, invoke `pre-pr-gates` (Skill tool). It runs t
 
 ## Step 6 — PR: `/formlabs-pr-write`
 
-Only after the gates pass, invoke `formlabs-pr-write` (Skill tool) to author the PR body — grounded in the real diff and the ticket loaded in step 1, with real test evidence, gating `gh pr create` on explicit approval.
+Only after the gates pass, invoke `formlabs-pr-write` (Skill tool) to author the PR body — grounded in the real diff and the ticket loaded in step 1, with real test evidence, gating `gh pr create` on explicit approval. Once the PR is open, note its number/URL and continue to step 7.
+
+## Step 7 — Babysit the review
+
+The PR is open, but it isn't done — CodeRabbit reviews Formlabs PRs automatically and usually starts within about **15 minutes** of the PR opening. Don't sign off before its review lands; stay on it until the PR is clean.
+
+**Wait for the first pass.** Schedule a wake-up ~15 minutes out (`ScheduleWakeup`), then poll — don't sit and spin. On each wake, check whether CodeRabbit has reviewed yet:
+
+```
+gh pr view <num> --json reviews,comments
+gh api repos/{owner}/{repo}/pulls/<num>/comments   # inline review comments
+```
+
+CodeRabbit posts as `coderabbitai[bot]` (a summary review plus inline comments, often with committable suggestions). If nothing from it yet, sleep another ~10–15 min and re-check; give up only after a couple of empty rounds and tell the user it never showed.
+
+**Work the findings.** Once its review is in, triage every comment:
+
+- **Valid & in scope** → fix it in the build (still under grug's judgment), commit, and push to the PR branch. A push triggers CodeRabbit to re-review.
+- **Wrong / out of scope / debatable** → reply on the comment explaining why, rather than silently ignoring it. Surface anything genuinely contentious to the user instead of deciding unilaterally.
+- Resolve threads you've addressed where appropriate.
+
+**Loop until clean.** After pushing fixes, wait for CodeRabbit's re-review (same wake-and-poll pattern) and repeat until it has no outstanding actionable comments. Then report: the PR link, what CodeRabbit raised, what you changed vs. pushed back on, and anything left for the user to decide.
+
+Keep the human in the loop — never resolve a substantive disagreement or force-merge on CodeRabbit's behalf; the goal is a review-clean PR ready for a human approver.
 
 ## Notes
 
