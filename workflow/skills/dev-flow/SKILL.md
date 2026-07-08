@@ -12,18 +12,18 @@ The flow, and why the order is fixed:
 1. **Load ticket** → shared understanding of what's being asked.
 2. **Plan — `/grill-with-docs`** → the plan is stress-tested against the domain model and docs *before* any code exists, when changing direction is cheap.
 3. **Build — `/grug:grug`** → implement under grug's anti-complexity judgment. This is where the real work is; it is human-driven and iterative.
-4. **[Checkpoint]** → the flow pauses here. Gates and PR-write only run once dev is actually finished.
+4. **Done check** → when the build is done and verified, the flow auto-advances; otherwise it keeps iterating (or waits, if the user says to hold).
 5. **Gates — `/pre-pr-gates`** → quality gates on the finished change.
 6. **PR — `/formlabs-pr-write`** → author the PR body against the real change and the ticket.
 
 ## Two entry points
 
-This skill spans a long, human-driven middle. Treat it as two segments:
+This skill can run start to finish in one pass. It has two entry points so the back half can also be triggered on its own:
 
-- **Kickoff** (user hands over a ticket): run steps 1–3, then **stop at the checkpoint**. Do not run the gates or open a PR — dev isn't done yet.
-- **Wrap** (user says "dev is done" / "wrap up <ticket>" / "ready for PR"): run steps 5–6. This half can be re-triggered independently later in the session, after the build has settled.
+- **Full run** (user hands over a ticket): run steps 1–3, and when the build reaches a genuinely done-and-verified state (see step 4) **continue automatically** into steps 5–6. No manual "go" required.
+- **Wrap only** (user says "dev is done" / "wrap up <ticket>" / "ready for PR"): jump straight to steps 5–6 for a build that already exists.
 
-Pick the segment from what the user said. A bare ticket handoff → kickoff. A "done / ready" signal → wrap. If genuinely ambiguous, ask which.
+Pick the entry from what the user said. A bare ticket handoff → full run. A "done / ready" signal on existing work → wrap only. If genuinely ambiguous, ask which.
 
 ## Step 1 — Load the ticket
 
@@ -44,9 +44,17 @@ Invoke `grug` (Skill tool). This puts the session into grug mode — grug voice 
 
 Grug mode persists across the whole dev phase. Stay in it until the build is done; the user drops the persona when they want ("normal mode").
 
-## Step 4 — Checkpoint (stop here on kickoff)
+## Step 4 — Done check → auto-advance
 
-Do **not** auto-advance to the gates. Coding is iterative and the user decides when it's finished. End the kickoff segment by telling the user dev is underway and that you'll run the gates and PR-write when they say dev is done.
+When the build reaches a done-and-verified state on its own, continue straight into the gates and PR-write; don't wait to be told. "Done and verified" means all of:
+
+- the agreed plan from step 2 is fully implemented,
+- the change builds and its tests pass (state what you ran), and
+- grug has no outstanding complexity/quality objections about the change.
+
+When all three hold, say the build is done and roll straight into step 5.
+
+Do **not** auto-advance while any of them is unmet — a plan item still open, failing/unrun tests, or unresolved review concerns. In that case keep iterating in grug mode; the user can also interject at any point, and if they say to hold off, park here and wait for their "dev is done" signal.
 
 ## Step 5 — Gates: `/pre-pr-gates`
 
