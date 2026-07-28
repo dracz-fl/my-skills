@@ -35,11 +35,17 @@ Get the ticket into context before planning.
 
 Restate the ticket in one or two sentences and confirm you have the right scope before moving on.
 
+**Verify the ticket's definite references.** When a ticket says "supply the value at *the* call site" or "extend *the* existing handler", that definite article is a claim about the base you're actually on — not a fact. Grep for each referent before planning around it. In stacked or parallel story work an absent caller usually means the seam belongs to a sibling story that isn't in your base; building the "obvious" wiring there either collides with that story or creates dead code nobody calls. Surface the gap and confirm scope instead of inventing the call site.
+
 ## Step 2 — Plan: `/grill-with-docs`
 
 Invoke `grill-with-docs` (Skill tool). It interviews you one question at a time and updates domain docs inline as decisions crystallise — it is inherently interactive, so hand control to it and let it run to a shared, agreed plan. Do not rush past it into code. The output of this step is a plan you and the user both endorse.
 
+**When the design is already locked, or the session can't sustain an interview.** A one-question-at-a-time grill assumes open design questions and a human present to answer them. If every design decision was closed upstream by a prior planning effort, or this is a background run with the user away, the full interview blocks instead of helping. Substitute two things: (1) a **code-grounding pass** — read the real conventions the change must follow (models, migrations, adjacent modules, existing tests) so the plan is anchored in the codebase rather than the ticket's prose; and (2) surface **only the residual forks** the locked design doesn't dictate — via `AskUserQuestion`, or as a stated assumption you proceed on. Keep the full grill for genuinely open designs in interactive sessions.
+
 ## Step 3 — Build: `/grug:grug`
+
+**Reconcile the base before writing any code.** If you're picking up an existing branch or worktree, `git fetch` updates the remote-tracking ref but does *not* move your local head — it can lag `origin/<branch>` by a teammate's commits pushed since the worktree was made. Compare (`git rev-list --left-right --count origin/<branch>...HEAD`) and fast-forward or rebase onto the pushed tip *before* building. Otherwise the divergence surfaces at push time, with your commit already sitting on a stale base, and you're rebasing after the fact — clean only if the two changes happened to touch disjoint files.
 
 Invoke `grug` (Skill tool). This puts the session into grug mode — grug voice *and* grug engineering judgment (say no to complexity, don't factor early, small refactors, integration tests, profile before optimizing) — for the rest of the build. Implement the agreed plan under that judgment.
 
