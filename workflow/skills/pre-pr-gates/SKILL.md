@@ -18,6 +18,8 @@ List every load-bearing assumption the change depends on — especially anything
 - **Confirmed** — name the evidence (the real request you sent and what came back, the file:line, the command you ran).
 - **Inferred** — you have not actually checked it for this change.
 
+One assumption is load-bearing in nearly every change and almost never stated aloud: **that the tests you ran actually reach what you changed.** If the change touches a shared or exported surface — a package `__all__`, a public `__init__`, an enum's membership, a serializer's field set — the tests guarding that surface live elsewhere *by design*, so a run scoped to the change's own files structurally cannot catch them. Either run the full test module for that area, or grep for the characterization test that pins the surface (`*public_api*`, `*surface*`, `*snapshot*`, `EXPECTED_`) and run it. Match verification breadth to the blast radius of the surface touched, not to the size of the diff — otherwise the failure surfaces in CI as a red PR instead of here.
+
 Then apply the rule: **any assumption that is both load-bearing and only inferred is a stop.** Confirm it with the cheapest real probe before declaring the work done — or, if it can't be confirmed now, say so explicitly and flag the risk to the user rather than shipping silently on top of it. Gate 0 produces findings, not edits; record the audit as a short table in the final summary.
 
 ## Subagents vs inline

@@ -49,6 +49,10 @@ For each requirement, name the specific, executable thing that would prove it �
 - Otherwise reach for the repo's own runner — its Playwright/jest/pytest/etc. with real mocking and screenshots — the way its existing tests do. Mock only at the edges (the network boundary), and say what you mocked.
 - A bespoke browser-CLI or a scratch script with no `node_modules` is almost always the wrong first move. Prove the real client path runs, not a reimplementation of it.
 
+**Build a negative control into the fixture.** When a requirement is conditional — "flagged items show the callout, unflagged ones don't", "admins see the panel, others don't" — construct the fixture so one case *must* exhibit the behaviour and another *must not*, in the same view. A single capture then evidences the rule and its boundary at once, and it catches a bug class a positive-only fixture cannot: the behaviour leaking onto the wrong row. A fixture with no negative case can't distinguish "correctly conditional" from "always on".
+
+**An absence requirement has more than one axis.** "No-op when the flag is off", "no change for logged-out users", "nothing written on a dry run" each decompose into independent claims — typically *no visible change* and *no side effect* (network call, write, job enqueued) — and they fail independently. UI that self-gates to null proves nothing about a data hook mounted unconditionally above it, so auditing only the render path will certify a "strict no-op" that still fires a request. Enumerate the axes, test each, and report an ungated one honestly rather than rounding up.
+
 ### 3. Run them for real and capture evidence
 
 Run each test. As you go, capture the evidence in a form you can embed:
@@ -58,6 +62,11 @@ Run each test. As you go, capture the evidence in a form you can embed:
 - **File reads** → the `file:line` and the actual content, when the proof rests on what the code says.
 
 Record a baseline where it matters (a bug fix: broken on `main`, gone on the branch). Tag each result in the ledger as you capture it.
+
+Two ways a run produces real-looking evidence about the wrong thing:
+
+- **Pin the entity under test by a stable identifier.** Capture its id or business key at creation and assert against exactly that. Never identify it by recency — `order_by('-id').first()`, "the latest run", "the only row". In a shared or parallel environment another actor's record silently becomes "the latest", and the proof reports a confident result about someone else's data.
+- **Confirm you're talking to the process you think you are.** Check who owns the port first: `lsof -nP -iTCP:<port> -sTCP:LISTEN`. A dev cluster (Tilt, docker, k8s) may already hold `[::1]:<port>`, and `localhost` resolves to IPv6 before IPv4 — so your requests hit the old process while your new server sits unvisited on IPv4. Use `127.0.0.1` explicitly, or a port free on both stacks. Read a *global*-looking failure (every route 404s, including ones you know work) as "wrong server", not "broken change".
 
 ### 4. Classify scope honestly
 
