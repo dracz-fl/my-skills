@@ -1,0 +1,120 @@
+genre = "questionnaire"
+title = "Ship-Estimate Ops Sanity Pass"
+eyebrow = "Form Now · Ship-Estimate · Ops Sanity Pass"
+return_to = "Daniel"
+lede = """
+We built an estimate that answers customers asking **"when will my order ship?"** — it finds the
+part that's furthest behind and rolls its remaining work forward across your hours. **The step
+durations, working hours, and cutoffs all come straight from your spec, so we're not re-asking
+those.** What we had to decide on our own is how each of the ~50 granular MES/Tulip statuses maps
+onto your pipeline buckets — plus a couple of edge cases. Those are the only things below.
+"""
+
+[[section]]
+heading = "Where the spec left gaps"
+blurb = """
+Six calls the spec doesn't spell out — how specific statuses get classified, and where the data
+was ambiguous so we picked the safer (usually longer) estimate.
+"""
+
+[[section.question]]
+label = "Can we detect strip-and-ship / supports-attached orders?"
+ask = """
+Your spec says Finishing is skipped for strip-and-ship / supports-attached parts. Can we tell
+which orders those are from the system?
+"""
+why = """
+We want to follow the spec and skip Finishing (3h) for those parts — but we can't find a reliable
+field in our data that flags "strip-and-ship" or "supports-attached." The one field that exists is
+free-text.
+
+So right now we **always** count Finishing for every SLA order, which makes those estimates a bit
+longer/safer. Tell us if there's a dependable signal we can key off — or if always-counting is
+fine for now.
+"""
+choose = [
+  "*Always count Finishing for now — the slightly longer estimate is fine",
+  "There's a reliable way to tell — I'll explain the field/rule below",
+]
+note = "If there's a signal — what is it?"
+note_placeholder = "e.g. 'strip-and-ship orders always have X set' — or how you'd tell on the floor"
+
+[[section.question]]
+label = "Where does the Cure step belong?"
+ask = """
+The resin Cure / Curing step isn't in the spec's tables — is it closer to Finishing or
+Post-Processing?
+"""
+why = """
+The spec's SLA table lists Printing → Wash → Post-Processing → Finishing, with no separate Cure
+row. We currently fold Cure into the **Finishing** bucket (it sits just upstream of Finishing on
+the line), but it could belong with Post-Processing. This decides how much time is left when a
+part is *at* cure.
+"""
+choose = [
+  "*Group it with Finishing",
+  "Group it with Post-Processing",
+  "It's really its own step (I'll note roughly how long)",
+]
+
+[[section.question]]
+label = "Where does 'Lot Created' belong?"
+ask = """
+The "Lot Created" status isn't in the spec — we placed it around the Wash step. Where does it
+actually belong?
+"""
+why = """
+"Lot Created" shows up somewhere between Wash and Cure in the MES data; we treat it as Wash. If a
+part's latest status is "Lot Created," this is what decides how much work we assume is still ahead
+of it.
+"""
+choose = ["*Around Wash", "Around Post-Processing", "Somewhere else (I'll note it)"]
+note = "Notes — what does \"Lot Created\" mean on the floor?"
+
+[[section.question]]
+label = "Which statuses mean a full scrap-and-reprint"
+ask = "Which of these statuses mean the part is being scrapped & reprinted from scratch?"
+why = """
+The spec defines the rework path (staging + a full reprint) — but not *which* of our MES statuses
+should trigger it. That's a big jump in the estimate, so it matters which statuses truly mean
+"start this part over." Check the ones that do; uncheck any that don't; add missing ones in the
+notes.
+"""
+check = [
+  "*Parts in Quarantine",
+  "*Quarantine",
+  "*Quarantine - Routing",
+  "*QC Failed",
+  "*Complete Build Failure",
+]
+note = "Add / remove statuses — anything we're missing or over-counting?"
+note_placeholder = "e.g. 'Quarantine often resolves without a reprint' or 'you're missing status X'"
+
+[[section.question]]
+label = "Are failed inspections / repeat steps NOT reprints?"
+ask = """
+We treat "Inspection Failed" and "Waiting to Repeat Wash / Blast / QC" as re-running just that one
+step — not a full reprint. Correct?
+"""
+why = """
+The spec doesn't classify these statuses either way. Big difference in time: re-running one step is
+small; a full reprint is ~a whole pipeline. We assumed a failed inspection or a "repeat" usually
+gets fixed by redoing one step, not reprinting the part.
+"""
+choose = [
+  "*Correct — those re-run one step, not a reprint",
+  "No — a failed inspection usually leads to a reprint",
+  "It depends (I'll explain)",
+]
+
+[[section.question]]
+label = "Treat already-shipped parts as done"
+ask = """
+If the least-finished part in an order is already Shipped / Closed, we treat the whole order as
+done (nothing left). Reasonable?
+"""
+why = """
+Not covered by the spec — it's an edge case. Logic: if even the part that's furthest behind is
+already shipped/closed, everything else must be done too. Just confirming that holds in practice.
+"""
+choose = ["*Yes, that's reasonable", "No — that's not always true (I'll explain)"]

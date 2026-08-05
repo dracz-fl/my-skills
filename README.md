@@ -12,7 +12,12 @@ my-skills/
 └── workflow/                         # the "workflow" plugin (bundles my skills)
     ├── .claude-plugin/plugin.json
     └── skills/
-        └── retrospective/SKILL.md
+        ├── retrospective/SKILL.md     # a skill can be a single file…
+        └── build-artifact/            # …or bundle its own resources
+            ├── SKILL.md
+            ├── scripts/               # executables the skill runs
+            ├── assets/                # files used in the output
+            └── references/            # docs loaded on demand
 ```
 
 - **Marketplace:** `my-skills`
@@ -58,6 +63,7 @@ own `.claude-plugin/plugin.json` and list it in `marketplace.json`.
 
 | Skill | Plugin | What it does |
 |-------|--------|--------------|
+| `build-artifact` | `workflow` | Builds a shareable HTML artifact page from a short TOML spec instead of hand-written CSS — a walkthrough/explainer of a change or system, or a questionnaire that collects answers and decisions back from a human. Bundles its own builder and theme, so the spec carries content only. |
 | `dev-flow` | `workflow` | Router for the standard per-ticket dev flow: loads the ticket, plans with `/grill-with-docs`, builds under `/grug:grug`, then (once dev is done) runs `/pre-pr-gates`, authors the PR with `/formlabs-pr-write`, and babysits the PR through CodeRabbit's review until it's clean. |
 | `pre-pr-gates` | `workflow` | Runs the mandatory pre-PR quality gates — an assumptions audit (Gate 0) then `/simplify`, `/decontextualize-doc-comments`, and `/thermo-nuclear-review` in sequence — before declaring work done or PR-ready. |
 | `prove-it` | `workflow` | Produces a proof-of-work artifact for a completed task: turns requirements into real tests, runs them, captures the evidence, and renders an HTML proof mapping each requirement to how it was tested. |

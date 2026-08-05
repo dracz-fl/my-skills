@@ -1,0 +1,73 @@
+genre = "walkthrough"
+title = "The hold now ends on a date the customer was actually told"
+eyebrow = "FN-1557 · merged"
+chips = ["2026-08-05", "PR #2015", "form-now-ecommerce-backend"]
+lede = """
+Auto-resolve used to lift a shipping hold based on when the hold was *created*, which drifted from
+the promise date shown at checkout. It now keys off the stored commitment, so the two can't diverge.
+"""
+
+[[section]]
+heading = "What was wrong"
+body = """
+The hold record carried a `created_at` and nothing else. Auto-resolve added the SLA window to that
+timestamp to decide when to release. But the date the customer saw at checkout came from a separate
+estimate computed at cart time — and any delay between cart and order creation pushed the two apart.
+
+In practice the drift was small but always in the same direction: **we released later than promised.**
+"""
+
+[[section.block]]
+type = "table"
+columns = ["Input", "Before", "After"]
+rows = [
+  ["Release basis", "`hold.created_at` + SLA", "`order.promised_ship_date`"],
+  ["Drift on delay", "Grows with cart-to-order gap", "None — the promise is stored"],
+  ["Backfill needed", "—", "Yes, for open holds"],
+]
+
+[[section]]
+heading = "The change"
+body = "The resolver reads the commitment off the order instead of recomputing it."
+
+[[section.block]]
+type = "diff"
+text = """
+@@ resolve_hold(hold)
+-    deadline = hold.created_at + SLA_WINDOW
+-    if now() >= deadline:
++    deadline = hold.order.promised_ship_date
++    if deadline and now() >= deadline:
+         hold.release()
+"""
+
+[[section.block]]
+type = "callout"
+tone = "warn"
+text = """
+`promised_ship_date` is nullable on orders created before this shipped. The guard treats a missing
+promise as **not yet resolvable** rather than falling back to the old arithmetic — a stuck hold is
+visible, a silently-wrong release is not.
+"""
+
+[[section]]
+heading = "How to verify it"
+
+[[section.block]]
+type = "steps"
+items = [
+  "Create an order with a promise date in the past and an open hold.",
+  "Run the resolver: `python manage.py resolve_holds --dry-run`.",
+  "Confirm the hold is listed as releasable and the reason cites the promise date.",
+  "Repeat with `promised_ship_date` nulled — the hold must be skipped, not released.",
+]
+
+[gap]
+heading = "The gap I did not close"
+text = """
+The backfill for open holds created before this deploy is **not** part of this PR. Until it runs,
+those holds have a null promise and will be skipped rather than released — they need a manual pass
+or the backfill command, tracked separately.
+"""
+
+footer = "Generated from a spec with artifact-kit."
