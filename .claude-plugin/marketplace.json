@@ -11,6 +11,11 @@
       "name": "workflow",
       "source": "./workflow",
       "description": "Workflow-improvement skills, including a retrospective that mines a session for durable lessons and turns them into CLAUDE.md rules, skills, hooks, or reference docs."
+    },
+    {
+      "name": "mini-grug",
+      "source": "./mini-grug",
+      "description": "Opt-in macOS desktop mascot: a small always-on-top pixel grug, driven by Claude Code hooks, that waves when any session waits for you and idles while sessions work."
     }
   ]
 }

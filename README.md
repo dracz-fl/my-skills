@@ -22,6 +22,7 @@ my-skills/
 
 - **Marketplace:** `my-skills`
 - **Plugin:** `workflow` — workflow-improvement skills.
+- **Plugin:** `mini-grug` — opt-in macOS desktop mascot that waves when a session waits for you (`mini-grug/`, separate so nobody gets a floating grug by accident).
 
 ## Install
 
@@ -30,6 +31,7 @@ From the local clone:
 ```
 /plugin marketplace add /Users/daniel.racz/repos/my-skills
 /plugin install workflow@my-skills
+/plugin install mini-grug@my-skills   # optional, macOS only
 ```
 
 Or, once pushed to a remote, from anywhere:
@@ -68,3 +70,4 @@ own `.claude-plugin/plugin.json` and list it in `marketplace.json`.
 | `pre-pr-gates` | `workflow` | Runs the mandatory pre-PR quality gates — an assumptions audit (Gate 0) then `/simplify`, `/decontextualize-doc-comments`, and `/thermo-nuclear-review` in sequence — before declaring work done or PR-ready. |
 | `prove-it` | `workflow` | Produces a proof-of-work artifact for a completed task: turns requirements into real tests, runs them, captures the evidence, and renders an HTML proof mapping each requirement to how it was tested. |
 | `retrospective` | `workflow` | Reviews the current conversation for friction (corrections, wrong guesses, repetition, recurring permission prompts), filters to the durable lessons, and turns them into a CLAUDE.md rule, a new skill, a hook, or a reference doc. |
+| `mini-grug` | `mini-grug` | Opt-in macOS desktop mascot: a small always-on-top pixel grug driven by Claude Code hooks. Waves when any session waits for you, idles while sessions work, celebrates when a turn ends; click to acknowledge and bring the terminal forward. Zero dependencies beyond Xcode CLT. |
