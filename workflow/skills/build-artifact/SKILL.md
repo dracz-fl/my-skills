@@ -63,7 +63,7 @@ SKILL=<this skill directory>
 cp $SKILL/assets/examples/walkthrough.toml my-page.toml   # or questionnaire.toml
 ```
 
-`references/spec-schema.md` has the full field reference: every block type, the questionnaire's `ref`/`choose`/`check`/`note` fields, and a recipe for a decision that can be vetoed. Read it while writing — it's short.
+`references/spec-schema.md` has the full field reference: every block type (including `figure`, which inlines local screenshots), the questionnaire's `ref`/`choose`/`check`/`note` fields, and a recipe for a decision that can be vetoed. Read it while writing — it's short.
 
 Prose fields take `**bold**`, `*italic*`, `` `code` ``, and links. Everything else is escaped, so write `<`, `&`, and quotes literally without thinking about it.
 

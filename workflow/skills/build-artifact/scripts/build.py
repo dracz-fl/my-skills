@@ -8,13 +8,19 @@ from this kit, so a page costs roughly as many lines as it has ideas.
 """
 
 import argparse
+import base64
 import html
+import mimetypes
 import re
 import sys
 import tomllib
 from pathlib import Path
 
 ASSETS = Path(__file__).resolve().parent.parent / "assets"
+
+# Directory of the spec being built, so a figure's `src` can be written
+# relative to the spec rather than to the caller's cwd. Set in main().
+SPEC_DIR = Path.cwd()
 
 # ── inline markup ────────────────────────────────────────────────────────────
 
@@ -444,6 +450,37 @@ def render_block(b):
         cls = f"callout {tone}".strip()
         return f'<div class="{cls}">{paras(b["text"])}</div>'
 
+    if kind == "figure":
+        # `src` is a local path, inlined as a data: URI — the artifact CSP
+        # blocks every other host, so a remote image would fail to load.
+        items = b.get("items") or [{"src": b.get("src"), "caption": b.get("caption", ""),
+                                    "alt": b.get("alt", "")}]
+        cols = int(b.get("columns", 1))
+        cells = []
+        for it in items:
+            src = it.get("src")
+            if not src:
+                sys.exit("figure block needs a 'src' (or 'items' each with one)")
+            p = Path(src).expanduser()
+            if not p.is_absolute():
+                p = (SPEC_DIR / p).resolve()
+            if not p.exists():
+                sys.exit(f"figure source not found: {p}")
+            mime = mimetypes.guess_type(p.name)[0] or "image/png"
+            if not mime.startswith("image/"):
+                sys.exit(f"figure source is not an image: {p} ({mime})")
+            b64 = base64.b64encode(p.read_bytes()).decode("ascii")
+            alt = html.escape(it.get("alt") or it.get("caption") or p.stem, quote=True)
+            cap = it.get("caption", "")
+            cells.append(
+                '<figure class="figure">'
+                f'<img src="data:{mime};base64,{b64}" alt="{alt}" loading="lazy">'
+                + (f"<figcaption>{inline(cap)}</figcaption>" if cap else "")
+                + "</figure>"
+            )
+        style = f' style="--fig-cols:{cols}"' if cols > 1 else ""
+        return f'<div class="figure-grid"{style}>' + "".join(cells) + "</div>"
+
     sys.exit(f"unknown block type {kind!r}")
 
 
@@ -497,6 +534,48 @@ GENRES = {
 }
 
 
+# Click a figure to see it full size. Kept dependency-free and keyboard-closable;
+# it is an overlay, not a <dialog>, so it never blocks the automation harness.
+FIGURE_JS = """
+(function () {
+  var box = document.createElement('div');
+  box.className = 'lightbox';
+  box.setAttribute('role', 'dialog');
+  box.setAttribute('aria-modal', 'true');
+  box.innerHTML = '<button class="lightbox-close" aria-label="Close">\\u00d7</button><img alt="">';
+  var img = box.querySelector('img');
+  document.body.appendChild(box);
+
+  function open(src, alt) {
+    img.src = src;
+    img.alt = alt || '';
+    box.classList.add('on');
+    document.body.style.overflow = 'hidden';
+    box.querySelector('.lightbox-close').focus();
+  }
+  function close() {
+    box.classList.remove('on');
+    document.body.style.overflow = '';
+    img.removeAttribute('src');
+  }
+
+  document.querySelectorAll('.figure img').forEach(function (el) {
+    el.tabIndex = 0;
+    el.setAttribute('role', 'button');
+    el.addEventListener('click', function () { open(el.src, el.alt); });
+    el.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(el.src, el.alt); }
+    });
+  });
+
+  box.addEventListener('click', close);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && box.classList.contains('on')) close();
+  });
+})();
+"""
+
+
 # ── assembly ─────────────────────────────────────────────────────────────────
 
 def build(spec):
@@ -504,6 +583,10 @@ def build(spec):
     if genre not in GENRES:
         sys.exit(f"unknown genre {genre!r}; known: {', '.join(sorted(GENRES))}")
     body, genre_css, genre_js = GENRES[genre](spec)
+    # Figures are click-to-zoom wherever they appear, so the JS rides along with
+    # the body rather than with any one genre.
+    if 'class="figure"' in body:
+        genre_js = (genre_js + "\n" + FIGURE_JS).strip()
     out = [
         # Not a document skeleton — just guarantees the em dashes survive when the
         # page is previewed over a server that doesn't send a charset.
@@ -583,6 +666,9 @@ def main():
     ap.add_argument("spec", type=Path)
     ap.add_argument("-o", "--out", type=Path, required=True)
     args = ap.parse_args()
+
+    global SPEC_DIR
+    SPEC_DIR = args.spec.resolve().parent
 
     spec = tomllib.loads(args.spec.read_text())
     if "title" not in spec:

@@ -134,9 +134,36 @@ Each `[[section.block]]` has a `type`:
 | `steps` | `items` | Numbered vertical sequence with a connecting rule. |
 | `callout` | `text`, `tone` | `tone` is `ok`, `warn`, `bad`, or omitted for accent. |
 | `mermaid` | `text` | Emitted as `<pre class="mermaid">`; artifacts render it natively. |
+| `figure` | `src`, `caption`, `alt` — or `items`, `columns` | Screenshots and other images. See below. |
 
 Prefer a `table`, `steps` or `diff` block over another paragraph. A wall of
 prose is the one failure mode this user has actually complained about.
+
+### The `figure` block
+
+`src` is a local image path, relative to the spec file (absolute and `~` work
+too). The builder inlines it as a `data:` URI — the artifact CSP blocks every
+remote host, so a URL never loads. Every figure opens full size on click, Enter
+or Space; Escape closes it.
+
+```toml
+[[section.block]]
+type = "figure"
+src = "shots/before.png"
+caption = "**Before:** the badge overflows at 320px."
+
+[[section.block]]
+type = "figure"
+columns = 2          # side by side on wide screens, stacked on phones
+items = [
+  { src = "shots/before.png", caption = "Before" },
+  { src = "shots/after.png",  caption = "After" },
+]
+```
+
+`alt` defaults to the caption, then to the file name; set it when the caption
+doesn't describe the image. Images count toward the 16MB page limit at about
+4/3 of their file size, so crop screenshots to the part that matters.
 
 ### The `[gap]` section
 
