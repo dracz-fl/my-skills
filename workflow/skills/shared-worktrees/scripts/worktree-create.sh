@@ -22,25 +22,28 @@ case "$name" in
   *)       dir="$ROOT/$repo/$name" ;;
 esac
 
-if [ -d "$dir" ]; then
-  echo "$dir"   # reuse existing worktree (made by herdr or an earlier session)
-  exit 0
+if [ ! -d "$dir" ]; then   # else reuse (made by herdr or an earlier session)
+  if git -C "$main" show-ref --verify --quiet "refs/heads/$name"; then
+    git -C "$main" worktree add "$dir" "$name" >&2
+  else
+    git -C "$main" worktree add -b "$name" "$dir" >&2
+  fi
+
+  # The hook replaces Claude Code's own creation, so honour .worktreeinclude here.
+  if [ -f "$main/.worktreeinclude" ]; then
+    git -C "$main" ls-files -z --others --ignored --exclude-from=.worktreeinclude |
+      (cd "$main" && xargs -0 -I{} rsync -R "{}" "$dir/") >&2 || true
+  fi
+
+  case "$name" in
+    agent-*) mkdir -p "$ROOT/.agents/.owners/$repo" && echo "$session" > "$ROOT/.agents/.owners/$repo/$name" ;;
+  esac
 fi
 
-if git -C "$main" show-ref --verify --quiet "refs/heads/$name"; then
-  git -C "$main" worktree add "$dir" "$name" >&2
-else
-  git -C "$main" worktree add -b "$name" "$dir" >&2
+# Show it in herdr's sidebar, unfocused. herdr also opens the main clone's workspace
+# when needed, which is what makes worktrees of repos without a workspace visible.
+if command -v herdr >/dev/null && herdr status server >/dev/null 2>&1; then
+  herdr worktree open --cwd "$main" --path "$dir" --label "$name" --no-focus >/dev/null 2>&1 || true
 fi
-
-# The hook replaces Claude Code's own creation, so honour .worktreeinclude here.
-if [ -f "$main/.worktreeinclude" ]; then
-  git -C "$main" ls-files -z --others --ignored --exclude-from=.worktreeinclude |
-    (cd "$main" && xargs -0 -I{} rsync -R "{}" "$dir/") >&2 || true
-fi
-
-case "$name" in
-  agent-*) mkdir -p "$ROOT/.agents/.owners/$repo" && echo "$session" > "$ROOT/.agents/.owners/$repo/$name" ;;
-esac
 
 echo "$dir"

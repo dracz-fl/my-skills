@@ -26,7 +26,10 @@ for marker in "$owners"/*/*; do
   fi
 
   main=$(dirname "$(git -C "$dir" rev-parse --path-format=absolute --git-common-dir)")
+  workspace=$(herdr worktree list --cwd "$main" 2>/dev/null |
+    jq -r --arg d "$dir" '.result.worktrees[]? | select(.path == $d) | .open_workspace_id // empty')
   if git -C "$main" worktree remove "$dir" >&2; then
+    [ -n "$workspace" ] && herdr workspace close "$workspace" >/dev/null 2>&1
     git -C "$main" branch -d "$name" >&2 || echo "kept unmerged branch $name" >&2
     rm -f "$marker"
   fi

@@ -12,8 +12,12 @@ dir=$(jq -r .worktree_path)
 common=$(git -C "$dir" rev-parse --path-format=absolute --git-common-dir)
 main=$(dirname "$common")
 branch=$(git -C "$dir" symbolic-ref --quiet --short HEAD || true)
+workspace=$(herdr worktree list --cwd "$main" 2>/dev/null |
+  jq -r --arg d "$dir" '.result.worktrees[]? | select(.path == $d) | .open_workspace_id // empty' || true)
 
 git -C "$main" worktree remove "$dir" >&2
+
+[ -n "$workspace" ] && herdr workspace close "$workspace" >/dev/null 2>&1 || true
 
 if [ -n "$branch" ]; then
   git -C "$main" branch -d "$branch" >&2 || echo "kept unmerged branch $branch" >&2

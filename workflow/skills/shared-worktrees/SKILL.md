@@ -18,10 +18,11 @@ One worktree layout for every tool on the machine:
 | Piece | Where | What it does |
 |---|---|---|
 | herdr | `~/.config/herdr/config.toml` → `[worktrees] directory` | herdr natively builds `<directory>/<repo>/<name>`, branch `<name>`. |
-| `WorktreeCreate` hook | `~/.claude/hooks/worktree-create.sh` | Replaces Claude Code's default `.claude/worktrees/<name>` placement for `claude -w`, `EnterWorktree` and subagent `isolation: worktree`. Resolves the main clone (also from inside a worktree), reuses the folder if it exists, checks out an existing branch or creates `<name>`, then copies `.worktreeinclude` files (Claude Code skips `.worktreeinclude` once a hook owns creation). Prints the path. |
-| Subagent worktrees | `<root>/.agents/<repo>/agent-*` | The create hook sends `agent-*` names here and writes an owner file (`<root>/.agents/.owners/<repo>/<name>`) holding the parent session id. Keeps them out of `<root>/<repo>/` and the herdr sidebar. |
-| `WorktreeRemove` hook | `~/.claude/hooks/worktree-remove.sh` | `git worktree remove` (refuses when the worktree has modified or untracked files; non-zero exit keeps it), then `git branch -d` (deletes merged branches only). |
-| `SessionEnd` sweep | `~/.claude/hooks/worktree-sweep.sh` | Claude Code does not clean up worktrees a hook made. The sweep removes the ending session's clean subagent worktrees, plus any clean one whose owner file is older than a day (a session that died). Dirty ones stay; branches go only when merged. |
+| `WorktreeCreate` hook | `~/.claude/hooks/worktree-create.sh` | Replaces Claude Code's default `.claude/worktrees/<name>` placement for `claude -w`, `EnterWorktree` and subagent `isolation: worktree`. Resolves the main clone (also from inside a worktree), reuses the folder if it exists, checks out an existing branch or creates `<name>`, then copies `.worktreeinclude` files (Claude Code skips `.worktreeinclude` once a hook owns creation). When the herdr server runs, opens the worktree as an unfocused herdr workspace. Prints the path. |
+| herdr sidebar | `herdr worktree open --cwd <main clone> --path <dir> --no-focus` | herdr lists a worktree only under an open workspace of its main clone. `worktree open` opens that parent workspace too, so worktrees of repos with no workspace (the service repos of a stack) become visible. |
+| Subagent worktrees | `<root>/.agents/<repo>/agent-*` | The create hook sends `agent-*` names here and writes an owner file (`<root>/.agents/.owners/<repo>/<name>`) holding the parent session id. They show in the sidebar like any other worktree. |
+| `WorktreeRemove` hook | `~/.claude/hooks/worktree-remove.sh` | `git worktree remove` (refuses when the worktree has modified or untracked files; non-zero exit keeps it), closes its herdr workspace, then `git branch -d` (deletes merged branches only). |
+| `SessionEnd` sweep | `~/.claude/hooks/worktree-sweep.sh` | Claude Code does not clean up worktrees a hook made. The sweep removes the ending session's clean subagent worktrees and closes their herdr workspaces, plus any clean one whose owner file is older than a day (a session that died). Dirty ones stay; branches go only when merged. |
 | `env.WORKTREE_ROOT` | `~/.claude/settings.json` | The root the create hook uses. Must equal herdr's `directory`. |
 
 Claude Code has no setting for the worktree folder; the `WorktreeCreate` hook is the only lever.
@@ -44,6 +45,7 @@ Claude Code has no setting for the worktree folder; the `WorktreeCreate` hook is
 Agent rules:
 
 - Make every worktree through one of the paths above, so it lands under the root. A worktree made with a hand-typed `git worktree add` elsewhere is invisible to this layout.
+- For a worktree of a different repo than the session's own (for example a service repo from a stack-root session), run `git -C <main clone> worktree add -b <name> <root>/<repo>/<name> origin/main`, then `herdr worktree open --cwd <main clone> --path <root>/<repo>/<name> --label <name> --no-focus` so it shows in the sidebar. The hooks do not run for plain git commands.
 - Name the worktree after the ticket or task (`fn-1753-traveler`); the name is also the branch.
 - Before removing, commit or move out anything the worktree holds that git ignores (a new `.env`, local data): ignored files go with the worktree. `.worktreeinclude` copies are safe to lose — the originals stay in the main clone.
 - When removal refuses because of uncommitted work, report the file list to the user and let them choose; keep `--force` for their explicit word.
