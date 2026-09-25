@@ -22,7 +22,6 @@ my-skills/
 
 - **Marketplace:** `my-skills`
 - **Plugin:** `workflow` — workflow-improvement skills.
-- **Plugin:** `mini-grug` — opt-in macOS desktop mascot that waves when a session waits for you (`mini-grug/`, separate so nobody gets a floating grug by accident).
 
 ## Install
 
@@ -31,7 +30,6 @@ From the local clone:
 ```
 /plugin marketplace add /Users/daniel.racz/repos/my-skills
 /plugin install workflow@my-skills
-/plugin install mini-grug@my-skills   # optional, macOS only
 ```
 
 Or, once pushed to a remote, from anywhere:
@@ -72,4 +70,3 @@ own `.claude-plugin/plugin.json` and list it in `marketplace.json`.
 | `tilt-env` | `workflow` | Controls the shared local Tilt dev env across parallel sessions: shared/exclusive leases with TTL, owner liveness and peer names so a blocked session can message the holder; detached bring-up pinned to the `orbstack` kube context; lease-checked `trigger`; a health check that ignores idle manual resources. |
 | `tilt-review` | `workflow` | `/workflow:tilt-review <PR URL>...` — loads one or more related PRs into the Tilt env as worktrees, writes a test brief from their descriptions and diffs, runs the migrations/seeds/flags they need, guides you through testing by hand, then restores the env. |
 | `retrospective` | `workflow` | Reviews the current conversation for friction (corrections, wrong guesses, repetition, recurring permission prompts), filters to the durable lessons, and turns them into a CLAUDE.md rule, a new skill, a hook, or a reference doc. |
-| `mini-grug` | `mini-grug` | Opt-in macOS desktop mascot: a small always-on-top pixel grug driven by Claude Code hooks. Waves when any session waits for you, idles while sessions work, celebrates when a turn ends; click to acknowledge and bring the terminal forward. Zero dependencies beyond Xcode CLT. |
