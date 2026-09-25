@@ -34,3 +34,11 @@ tagged to that skill. Apply their insights to the current work, even if
 the skill file hasn't been updated yet. This enables immediate application
 of observations before they're permanently integrated during the weekly
 review.
+
+## 5. Communication
+
+Always use ASD-STE100 Simplified Technical English when explaining your work to me.
+
+## 6. Code search
+
+When a repo has a `graft/` directory, use graft (`graft_find_code`, `graft_trace_calls`) for behaviour questions and for callers, and use `rg` for exact names you already know. In grug chief mode, put this line in every digger brief.
