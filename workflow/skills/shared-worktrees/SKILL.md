@@ -18,17 +18,17 @@ One worktree layout for every tool on the machine:
 | Piece | Where | What it does |
 |---|---|---|
 | herdr | `~/.config/herdr/config.toml` → `[worktrees] directory` | herdr natively builds `<directory>/<repo>/<name>`, branch `<name>`. |
-| `WorktreeCreate` hook | `~/.claude/hooks/worktree-create.sh` | Replaces Claude Code's default `.claude/worktrees/<name>` placement for `claude -w`, `EnterWorktree` and subagent `isolation: worktree`. Resolves the main clone (also from inside a worktree), reuses the folder if it exists, checks out an existing branch or creates `<name>`, then copies `.worktreeinclude` files (Claude Code skips `.worktreeinclude` once a hook owns creation). When the herdr server runs, opens the worktree as an unfocused herdr workspace so it shows in the sidebar — except subagent worktrees (`agent-*`), which are short-lived. Prints the path. |
-| `WorktreeRemove` hook | `~/.claude/hooks/worktree-remove.sh` | `git worktree remove` (refuses when the worktree has modified or untracked files; non-zero exit keeps it), closes the herdr workspace that showed it, then `git branch -d` (deletes merged branches only). |
+| `WorktreeCreate` hook | `~/.claude/hooks/worktree-create.sh` | Replaces Claude Code's default `.claude/worktrees/<name>` placement for `claude -w`, `EnterWorktree` and subagent `isolation: worktree`. Resolves the main clone (also from inside a worktree), reuses the folder if it exists, checks out an existing branch or creates `<name>`, then copies `.worktreeinclude` files (Claude Code skips `.worktreeinclude` once a hook owns creation). Prints the path. |
+| Subagent worktrees | `<root>/.agents/<repo>/agent-*` | The create hook sends `agent-*` names here and writes an owner file (`<root>/.agents/.owners/<repo>/<name>`) holding the parent session id. Keeps them out of `<root>/<repo>/` and the herdr sidebar. |
+| `WorktreeRemove` hook | `~/.claude/hooks/worktree-remove.sh` | `git worktree remove` (refuses when the worktree has modified or untracked files; non-zero exit keeps it), then `git branch -d` (deletes merged branches only). |
+| `SessionEnd` sweep | `~/.claude/hooks/worktree-sweep.sh` | Claude Code does not clean up worktrees a hook made. The sweep removes the ending session's clean subagent worktrees, plus any clean one whose owner file is older than a day (a session that died). Dirty ones stay; branches go only when merged. |
 | `env.WORKTREE_ROOT` | `~/.claude/settings.json` | The root the create hook uses. Must equal herdr's `directory`. |
 
 Claude Code has no setting for the worktree folder; the `WorktreeCreate` hook is the only lever.
 
-herdr groups a worktree workspace under a workspace for its main clone and opens that one too when it is not open yet.
-
 ## Install
 
-1. Run `scripts/install.sh [root]` from this skill's directory (default root `~/code/worktrees`; needs `jq`). It copies both hooks, writes the hooks and `env.WORKTREE_ROOT` into `~/.claude/settings.json`, and adds `[worktrees]` to the herdr config. It backs both files up as `*.bak-<timestamp>` and is safe to re-run. When herdr already has a `[worktrees]` section, it prints the value to set by hand.
+1. Run `scripts/install.sh [root]` from this skill's directory (default root `~/code/worktrees`; needs `jq`). It copies the three hooks, writes them and `env.WORKTREE_ROOT` into `~/.claude/settings.json` (the sweep is appended to any existing `SessionEnd` hooks), and adds `[worktrees]` to the herdr config. It backs both files up as `*.bak-<timestamp>` and is safe to re-run. When herdr already has a `[worktrees]` section, it prints the value to set by hand.
 2. Restart herdr and open a new Claude Code session; running sessions keep the old hooks.
 3. Verify in a scratch repo: `claude -w hooktest -p "pwd"` → a worktree at `<root>/<repo>/hooktest`; then remove it with `echo '{"worktree_path":"<that path>"}' | ~/.claude/hooks/worktree-remove.sh`. Install is done when the path lands under the root and removal deletes it and the branch.
 

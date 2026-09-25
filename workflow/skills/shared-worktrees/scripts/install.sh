@@ -17,6 +17,7 @@ command -v jq >/dev/null || { echo "jq is required" >&2; exit 1; }
 mkdir -p "$HOME/.claude/hooks" "$root"
 install -m 755 "$here/worktree-create.sh" "$HOME/.claude/hooks/worktree-create.sh"
 install -m 755 "$here/worktree-remove.sh" "$HOME/.claude/hooks/worktree-remove.sh"
+install -m 755 "$here/worktree-sweep.sh" "$HOME/.claude/hooks/worktree-sweep.sh"
 
 [ -f "$settings" ] || echo '{}' > "$settings"
 cp "$settings" "$settings.bak-$stamp"
@@ -25,6 +26,9 @@ jq --arg root "$root" '
   .hooks.WorktreeCreate = [{"hooks":[{"type":"command","command":"~/.claude/hooks/worktree-create.sh"}]}]
   | .hooks.WorktreeRemove = [{"hooks":[{"type":"command","command":"~/.claude/hooks/worktree-remove.sh"}]}]
   | .env.WORKTREE_ROOT = $root
+  | .hooks.SessionEnd = ((.hooks.SessionEnd // [])
+      | map(select(any(.hooks[]?; .command == "~/.claude/hooks/worktree-sweep.sh") | not))
+      + [{"hooks":[{"type":"command","command":"~/.claude/hooks/worktree-sweep.sh"}]}])
 ' "$settings" > "$tmp"
 mv "$tmp" "$settings"
 echo "claude: hooks + env.WORKTREE_ROOT written to $settings (backup .bak-$stamp)"
