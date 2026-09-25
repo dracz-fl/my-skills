@@ -18,11 +18,13 @@ One worktree layout for every tool on the machine:
 | Piece | Where | What it does |
 |---|---|---|
 | herdr | `~/.config/herdr/config.toml` → `[worktrees] directory` | herdr natively builds `<directory>/<repo>/<name>`, branch `<name>`. |
-| `WorktreeCreate` hook | `~/.claude/hooks/worktree-create.sh` | Replaces Claude Code's default `.claude/worktrees/<name>` placement for `claude -w`, `EnterWorktree` and subagent `isolation: worktree`. Resolves the main clone (also from inside a worktree), reuses the folder if it exists, checks out an existing branch or creates `<name>`, then copies `.worktreeinclude` files (Claude Code skips `.worktreeinclude` once a hook owns creation). Prints the path. |
-| `WorktreeRemove` hook | `~/.claude/hooks/worktree-remove.sh` | `git worktree remove` (refuses when the worktree has modified or untracked files; non-zero exit keeps it), then `git branch -d` (deletes merged branches only). |
+| `WorktreeCreate` hook | `~/.claude/hooks/worktree-create.sh` | Replaces Claude Code's default `.claude/worktrees/<name>` placement for `claude -w`, `EnterWorktree` and subagent `isolation: worktree`. Resolves the main clone (also from inside a worktree), reuses the folder if it exists, checks out an existing branch or creates `<name>`, then copies `.worktreeinclude` files (Claude Code skips `.worktreeinclude` once a hook owns creation). When the herdr server runs, opens the worktree as an unfocused herdr workspace so it shows in the sidebar — except subagent worktrees (`agent-*`), which are short-lived. Prints the path. |
+| `WorktreeRemove` hook | `~/.claude/hooks/worktree-remove.sh` | `git worktree remove` (refuses when the worktree has modified or untracked files; non-zero exit keeps it), closes the herdr workspace that showed it, then `git branch -d` (deletes merged branches only). |
 | `env.WORKTREE_ROOT` | `~/.claude/settings.json` | The root the create hook uses. Must equal herdr's `directory`. |
 
 Claude Code has no setting for the worktree folder; the `WorktreeCreate` hook is the only lever.
+
+herdr groups a worktree workspace under a workspace for its main clone and opens that one too when it is not open yet.
 
 ## Install
 
