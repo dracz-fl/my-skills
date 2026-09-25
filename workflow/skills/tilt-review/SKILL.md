@@ -1,8 +1,8 @@
 ---
 name: tilt-review
-description: Load one or more related PRs into the local Tilt env, seed what they need, and guide me through testing them by hand.
+description: Load one or more related PRs into the local Tilt env, seed what they need, and guide me through testing them by hand — optionally with a thermo-nuclear review first and a test wizard.
 disable-model-invocation: true
-argument-hint: <PR URL> [<PR URL> ...]
+argument-hint: [--thermo] [--wizard] <PR URL> [<PR URL> ...]
 ---
 
 # tilt-review
@@ -11,6 +11,11 @@ The user hands you one or more related PR links (form-now, form-now-ecommerce-ba
 formcloud-manufacturing). You turn them into a **test brief**, load them into the
 shared Tilt env, prepare the data they need, then guide the user while they test
 by hand. The env is shared, so every change runs under a tilt-env lease.
+
+| Flag | Adds |
+|---|---|
+| `--thermo` | a thermo-nuclear review of each PR, run in the background while Tilt loads; its **findings** reach the user before testing starts (step 3, step 6) |
+| `--wizard` | an interactive bash wizard that walks the user through the test steps and captures a pass/fail **result** per step (step 6, step 8) |
 
 ```bash
 TR=~/repos/my-skills/workflow/skills/tilt-review/scripts/tilt-review.py   # --help for flags
@@ -27,7 +32,8 @@ Done when you know your peer name and the lease table.
 ## 2. Fetch the PRs
 
 `python3 $TR prepare <url> [<url> ...]` — checks each PR head out, detached, at
-`{repo}-worktrees/pr-<N>` and prints the Tilt slots it feeds plus **hints** from
+`{repo}-worktrees/pr-<N>` and prints its path, its base branch (often another PR's
+branch, for a stacked PR), the Tilt slots it feeds, and **hints** from
 its changed files (migrations, seeds, dependencies, deploy config). It changes no
 env state, so it needs no lease. It refuses two PRs for one slot; ask the user which
 to load.
@@ -59,6 +65,18 @@ The brief holds, per PR:
 
 Done when every PR has all four fields filled, or marked `unknown` with the question
 for the user. Show the brief to the user and resolve the `unknown` items before step 4.
+Neither flag given → end the brief with one line: `--thermo` and `--wizard` are
+available; the user may add either now.
+
+**`--thermo`:** once the brief is confirmed, launch one background `Agent`
+(general-purpose) per PR that loads into Tilt, all in one message, with this prompt:
+
+> Invoke the skill `thermo-nuclear-review:thermo-nuclear-review` and follow it on the
+> worktree `<path>`. Its diff base is `origin/<base>`, not main:
+> `git -C <path> diff origin/<base>...HEAD`. Read-only — no edits, commits, or PR
+> comments. Return only the findings report.
+
+Continue with step 4 while they run.
 
 ## 4. Load the PRs into Tilt
 
@@ -94,15 +112,22 @@ as a manual step for the user.
 
 1. Downgrade, so other sessions can still run tests:
    `python3 $TE lease acquire --mode shared --purpose "user testing PR <#s>" --peer <name> --ttl 120`.
-2. Send one guide message, per PR:
+2. **`--thermo`:** wait for every review agent. Show the findings per PR, `high`
+   first, before the test steps; add each `high` finding that has a runtime effect to
+   that PR's **Watch** field and to the test steps.
+3. Write the guide, per PR:
    - the numbered steps to test it, with concrete URLs and credentials (a
      resource's links: `tilt get uiresource "<name>" -o json`, `status.endpointLinks`);
    - what "working" looks like for each step;
    - where to look when it doesn't: `tilt logs "<resource>"`, Jaeger
      http://localhost:16686, the Tilt UI http://localhost:10350;
    - the manual Data steps from step 5.
-3. End with: which worktrees are loaded, that you hold a shared lease for 2 h, and
-   that they say **done** when finished.
+4. **`--wizard`:** build the wizard from the guide as `references/wizard.md` says.
+   Done when `bash -n` passes and every guide step is one of its stages.
+5. Send the guide. End with: which worktrees are loaded, that you hold a shared
+   lease for 2 h, and that they say **done** when finished. With `--wizard`, add the
+   run command — `bash ~/.local/state/tilt-env/review-wizard.sh`, in a separate
+   terminal, because it reads keyboard input, which a `!` command cannot.
 
 ## 7. While the user tests
 
@@ -118,6 +143,8 @@ as a manual step for the user.
 On **done**:
 
 1. `python3 $TE lease acquire --mode exclusive --purpose "close review PR <#s>" --peer <name> --wait 600`.
+   **`--wizard`:** read `~/.local/state/tilt-env/review-results.env` now — `restore`
+   deletes it. Every `fail` and every note is a finding.
 2. Migrations from step 5 stay in the local DBs after the switch back. Tell the user
    which ran, and roll them back now if they ask — while the PR code, which holds the
    migration files, is still loaded.
@@ -127,6 +154,7 @@ On **done**:
    `python3 $TR restore [--remove-worktrees]` — switches the slots back to their
    pre-review worktrees and waits for healthy.
 5. `python3 $TE lease release`.
-6. Report: the findings from testing, per PR, and anything left changed in the env.
+6. Report, per PR: the findings from testing, the wizard results (`--wizard`), the
+   thermo findings still open (`--thermo`), and anything left changed in the env.
 
 Done when `lease status` no longer lists you and the report is sent.

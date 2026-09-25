@@ -8,7 +8,9 @@
 
 `prepare` saves the current worktree selection once per review (in
 review.json next to the tilt-env leases), so `restore` returns to it even after
-several prepare rounds. Leases and health come from the sibling tilt-env skill.
+several prepare rounds. `restore` deletes review.json and, if present, the
+review wizard and its results file. Leases and health come from the sibling
+tilt-env skill.
 
 Exit codes: 0 ok, 1 env not healthy / git failure, 2 usage error or no lease.
 """
@@ -29,6 +31,8 @@ _spec.loader.exec_module(te)
 
 STACK = te.ENV_DIR.parent
 REVIEW = te.STATE_DIR / 'review.json'
+WIZARD = te.STATE_DIR / 'review-wizard.sh'          # optional, written by the agent
+RESULTS = te.STATE_DIR / 'review-results.env'       # the wizard's captured outcomes
 CONFIG = te.ENV_DIR / 'tilt_config.json'
 
 # GitHub repo name -> Tilt worktree keys it feeds (see switch-worktree.py REPO_MAP).
@@ -69,10 +73,15 @@ def load_review():
     return json.loads(REVIEW.read_text()) if REVIEW.exists() else None
 
 
-def fetch_worktree(repo, number):
-    """Check PR head out, detached, at {repo}-worktrees/pr-N. Returns the head sha."""
+def fetch_worktree(repo, number, base):
+    """Check PR head out, detached, at {repo}-worktrees/pr-N. Returns the head sha.
+
+    Also refreshes origin/<base>: a stacked PR's base is another PR's branch, and
+    a review diff must be taken against it, not against main.
+    """
     main = STACK / repo
     wt = STACK / ('%s-worktrees' % repo) / ('pr-%d' % number)
+    run('git', '-C', str(main), 'fetch', '--quiet', 'origin', base)
     run('git', '-C', str(main), 'fetch', '--quiet', 'origin', 'pull/%d/head' % number)
     sha = run('git', '-C', str(main), 'rev-parse', 'FETCH_HEAD')  # FETCH_HEAD is per-worktree
     if wt.exists():
@@ -92,7 +101,7 @@ def prepare(args):
         if not m:
             sys.exit('ERROR: not a GitHub PR URL: %s' % url)
         repo, number = m.group(2), int(m.group(3))
-        info = json.loads(run('gh', 'pr', 'view', url, '--json', 'title,state,headRefOid,files'))
+        info = json.loads(run('gh', 'pr', 'view', url, '--json', 'title,state,headRefOid,baseRefName,files'))
         files = [f['path'] for f in info['files']]
         keys = list(REPOS.get(repo, []))
         if repo == 'formcloud-manufacturing' and any(f.startswith('preform_service/') for f in files):
@@ -101,7 +110,9 @@ def prepare(args):
                         if r in (None, repo) and any(re.search(rx, f) for f in files)})
         prs.append({'url': url, 'repo': repo, 'number': number, 'title': info['title'],
                     'state': info['state'], 'sha': info['headRefOid'], 'keys': keys,
-                    'worktree': 'pr-%d' % number, 'files': len(files), 'hints': hints})
+                    'worktree': 'pr-%d' % number, 'base': info['baseRefName'],
+                    'path': str(STACK / ('%s-worktrees' % repo) / ('pr-%d' % number)),
+                    'files': len(files), 'hints': hints})
 
     claimed = {}
     for pr in prs:
@@ -118,7 +129,7 @@ def prepare(args):
                   'snapshot': {k: cfg.get('%s-worktree' % k, 'default') for k in ALL_KEYS}}
     for pr in prs:
         if pr['repo'] in REPOS or pr['repo'] == 'form-now-dev-env':
-            got = fetch_worktree(pr['repo'], pr['number'])
+            got = fetch_worktree(pr['repo'], pr['number'], pr['base'])
             if got != pr['sha']:
                 print('WARNING: %s fetched %s but GitHub says head is %s' % (pr['url'], got, pr['sha']))
         review['prs'] = [p for p in review['prs'] if p['url'] != pr['url']] + [pr]
@@ -127,6 +138,8 @@ def prepare(args):
 
     for pr in prs:
         print('#%d %s [%s] %s' % (pr['number'], pr['repo'], pr['state'], pr['title']))
+        if pr['repo'] in REPOS or pr['repo'] == 'form-now-dev-env':
+            print('  path %s (base origin/%s)' % (pr['path'], pr['base']))
         if pr['repo'] == 'form-now-dev-env':
             print('  env repo itself: checked out at form-now-dev-env-worktrees/%s; Tilt runs from the'
                   ' main checkout, so testing it means restarting Tilt there - ask the user' % pr['worktree'])
@@ -182,7 +195,8 @@ def restore(args):
                 out = subprocess.run(['git', '-C', str(STACK / p['repo']), 'worktree', 'remove', str(wt)],
                                      capture_output=True, text=True)
                 print('removed %s' % wt if out.returncode == 0 else 'kept %s: %s' % (wt, out.stderr.strip()))
-    REVIEW.unlink()
+    for f in (REVIEW, WIZARD, RESULTS):
+        f.unlink(missing_ok=True)
     print('review closed; Tilt slots restored: %s' % back)
     return rc
 
